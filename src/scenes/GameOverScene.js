@@ -37,7 +37,7 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // 按钮间距
-        const buttonY = 480;
+        let buttonY = 480;
 
         if (this.win && this.hasNext) {
             const nextBtn = this.add.text(300, buttonY, '进行下一关 (Next)', {
@@ -52,20 +52,39 @@ export class GameOverScene extends Phaser.Scene {
             });
             nextBtn.on('pointerover', () => nextBtn.setAlpha(0.8));
             nextBtn.on('pointerout', () => nextBtn.setAlpha(1));
-        } else {
-            const homeBtn = this.add.text(300, buttonY, '返回首页 (Home)', {
+
+            buttonY += 100;
+        } else if (!this.win) {
+            // 失败时显示重新挑战按钮
+            const retryBtn = this.add.text(300, buttonY, '重新挑战 (Retry)', {
                 fontSize: '32px',
                 fill: '#fff',
-                backgroundColor: '#D32F2F',
+                backgroundColor: '#1976D2',
                 padding: { x: 40, y: 15 }
             }).setOrigin(0.5).setInteractive();
 
-            homeBtn.on('pointerup', () => {
-                this.scene.start('MenuScene');
+            retryBtn.on('pointerup', () => {
+                this.scene.start('GameScene', { levelIndex: this.levelIndex });
             });
-            homeBtn.on('pointerover', () => homeBtn.setAlpha(0.8));
-            homeBtn.on('pointerout', () => homeBtn.setAlpha(1));
+            retryBtn.on('pointerover', () => retryBtn.setAlpha(0.8));
+            retryBtn.on('pointerout', () => retryBtn.setAlpha(1));
+
+            buttonY += 100;
         }
+
+        // 返回首页按钮
+        const homeBtn = this.add.text(300, buttonY, '返回首页 (Home)', {
+            fontSize: '32px',
+            fill: '#fff',
+            backgroundColor: '#D32F2F',
+            padding: { x: 40, y: 15 }
+        }).setOrigin(0.5).setInteractive();
+
+        homeBtn.on('pointerup', () => {
+            this.scene.start('MenuScene');
+        });
+        homeBtn.on('pointerover', () => homeBtn.setAlpha(0.8));
+        homeBtn.on('pointerout', () => homeBtn.setAlpha(1));
 
         if (this.win) {
             const menuBtn = this.add.text(300, buttonY + 100, '回主菜单 (Menu)', {

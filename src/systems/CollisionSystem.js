@@ -51,32 +51,48 @@ export class CollisionSystem {
 
         // Bullets hit each other
         physics.add.overlap(playerBullets, enemyBullets, (pBullet, eBullet) => {
-            pBullet.destroyBullet();
-            eBullet.destroyBullet();
+            if (pBullet && pBullet.destroyBullet) {
+                pBullet.destroyBullet();
+            }
+            if (eBullet && eBullet.destroyBullet) {
+                eBullet.destroyBullet();
+            }
         });
     }
 
     bulletHitWall(bullet, wall) {
-        bullet.destroyBullet();
-        wall.destroy(); // 砖墙被摧毁
+        if (bullet && bullet.destroyBullet) {
+            bullet.destroyBullet();
+        }
+        if (wall && wall.destroy) {
+            wall.destroy(); // 砖墙被摧毁
+        }
     }
 
     bulletHitSteel(bullet, steel) {
-        bullet.destroyBullet();
+        if (bullet && bullet.destroyBullet) {
+            bullet.destroyBullet();
+        }
         // 钢墙不可摧毁
     }
 
     bulletHitBase(bullet, base) {
-        bullet.destroyBullet();
-        // 基地被毁
-        this.scene.baseDestroyed();
+        if (bullet && bullet.destroyBullet) {
+            bullet.destroyBullet();
+        }
+        // 只在基地还活跃时才触发摧毁
+        if (base && base.active && this.scene && !this.scene.gameOverTriggered) {
+            this.scene.baseDestroyed();
+        }
     }
 
     playerBulletHitEnemy(bullet, enemy) {
         // 先确保子弹和敌人都还在激活状态
-        if (!bullet.activeBullet || !enemy.active) return;
+        if (!bullet || !bullet.activeBullet || !enemy || !enemy.active) return;
 
-        bullet.destroyBullet();
+        if (bullet.destroyBullet) {
+            bullet.destroyBullet();
+        }
 
         // 保存敌人的位置再让它受到伤害，可能会被销毁
         const enemyX = enemy.x;
@@ -89,9 +105,11 @@ export class CollisionSystem {
     }
 
     enemyBulletHitPlayer(bullet, player) {
-        if (!bullet.activeBullet || !player.active) return;
+        if (!bullet || !bullet.activeBullet || !player || !player.active) return;
 
-        bullet.destroyBullet();
+        if (bullet.destroyBullet) {
+            bullet.destroyBullet();
+        }
         player.takeDamage();
         this.scene.updateUI();
     }

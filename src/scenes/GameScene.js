@@ -58,7 +58,7 @@ export class GameScene extends Phaser.Scene {
 
         // Enemy Spawner - Faster spawn
         this.time.addEvent({
-            delay: 2000,
+            delay: 1000,
             callback: this.spawnEnemy,
             callbackScope: this,
             loop: true
@@ -190,38 +190,54 @@ export class GameScene extends Phaser.Scene {
 
     baseDestroyed() {
         if (this.gameOverTriggered) return;
-        if (this.base && this.base.texture && this.base.texture.key !== 'base_dead') {
-            this.gameOverTriggered = true;
+        this.gameOverTriggered = true;
+        
+        // 立即暂停物理系统
+        this.physics.pause();
+        
+        if (this.base) {
             this.base.setTexture('base_dead');
-            if (this.player) {
-                this.player.active = false;
-                this.player.setVelocity(0, 0);
+            if (this.base.body) {
+                this.base.body.enable = false;
             }
-            this.triggerGameOver();
         }
+        if (this.player) {
+            this.player.active = false;
+            this.player.setVelocity(0, 0);
+        }
+        this.triggerGameOver();
     }
 
     playerDied() {
         if (this.gameOverTriggered) return;
         this.gameOverTriggered = true;
+        
+        // 立即暂停物理系统
+        this.physics.pause();
+        
+        if (this.player) {
+            this.player.active = false;
+        }
         this.triggerGameOver();
     }
 
     triggerGameOver() {
-        // 停止所有定时器和动画，防止崩溃/死机
+        // 停止所有定时器和动画
         this.time.removeAllEvents();
         this.tweens.killAll();
-        // 短暂延迟后切换到结算场景
-        this.time.delayedCall(800, () => {
-            this.scene.start('GameOverScene', {
-                win: false,
-                kills: this.kills,
-                levelIndex: this.currentLevelIndex
-            });
+        
+        // 立即切换场景
+        this.scene.start('GameOverScene', {
+            win: false,
+            kills: this.kills,
+            levelIndex: this.currentLevelIndex
         });
     }
 
     levelComplete() {
+        // 立即暂停物理系统
+        this.physics.pause();
+        
         // 更新本次运行的解锁进度（不保存到 localStorage）
         const finishedLevel = this.currentLevelIndex;
         const nextLevelIndex = finishedLevel + 1;
@@ -241,75 +257,109 @@ export class GameScene extends Phaser.Scene {
     }
 
     setupMobileControls() {
-        // UI Container for mobile (but visible on PC too if resized)
-        // Adjust positions for larger controls
-        let startX = 120, startY = 680;
-        let joyBase = this.add.image(startX, startY, 'joyBase').setInteractive().setDepth(150).setScrollFactor(0);
-        let joyStick = this.add.image(startX, startY, 'joyStick').setDepth(151).setScrollFactor(0);
+        // 十字键控制 - 四个方向按钮，紧凑设计
+        const dpadX = 100;
+        const dpadY = 680;
+        const btnSize = 40;
+        const spacing = 45;
 
-        let joyPointer = null;
+        // 创建十字键背景容器
+        const dpadBg = this.add.graphics();
+        dpadBg.fillStyle(0x333333, 0.6);
+        dpadBg.fillRoundedRect(dpadX - spacing - 5, dpadY - spacing - 5, spacing * 2 + 10, spacing * 2 + 10, 8);
+        dpadBg.setDepth(149).setScrollFactor(0);
 
-        joyBase.on('pointerdown', function (pointer) {
-            joyPointer = pointer;
-            this.updateJoystick(pointer, startX, startY, joyStick);
-        }, this);
+        // 上键
+        const upBtn = this.add.rectangle(dpadX, dpadY - spacing, btnSize, btnSize, 0x2196F3).setInteractive().setDepth(150).setScrollFactor(0);
+        upBtn.on('pointerdown', () => {
+            this.joyStickDirection = 'up';
+            upBtn.setFillStyle(0x1976D2);
+        });
+        upBtn.on('pointerup', () => {
+            if (this.joyStickDirection === 'up') this.joyStickDirection = null;
+            upBtn.setFillStyle(0x2196F3);
+        });
+        upBtn.on('pointerout', () => {
+            if (this.joyStickDirection === 'up') this.joyStickDirection = null;
+            upBtn.setFillStyle(0x2196F3);
+        });
 
-        this.input.on('pointermove', function (pointer) {
-            if (joyPointer === pointer) {
-                this.updateJoystick(pointer, startX, startY, joyStick);
-            }
-        }, this);
+        // 下键
+        const downBtn = this.add.rectangle(dpadX, dpadY + spacing, btnSize, btnSize, 0x2196F3).setInteractive().setDepth(150).setScrollFactor(0);
+        downBtn.on('pointerdown', () => {
+            this.joyStickDirection = 'down';
+            downBtn.setFillStyle(0x1976D2);
+        });
+        downBtn.on('pointerup', () => {
+            if (this.joyStickDirection === 'down') this.joyStickDirection = null;
+            downBtn.setFillStyle(0x2196F3);
+        });
+        downBtn.on('pointerout', () => {
+            if (this.joyStickDirection === 'down') this.joyStickDirection = null;
+            downBtn.setFillStyle(0x2196F3);
+        });
 
-        this.input.on('pointerup', function (pointer) {
-            if (joyPointer === pointer) {
-                joyPointer = null;
-                joyStick.setPosition(startX, startY);
-                this.joyStickDirection = null;
-            }
-        }, this);
+        // 左键
+        const leftBtn = this.add.rectangle(dpadX - spacing, dpadY, btnSize, btnSize, 0x2196F3).setInteractive().setDepth(150).setScrollFactor(0);
+        leftBtn.on('pointerdown', () => {
+            this.joyStickDirection = 'left';
+            leftBtn.setFillStyle(0x1976D2);
+        });
+        leftBtn.on('pointerup', () => {
+            if (this.joyStickDirection === 'left') this.joyStickDirection = null;
+            leftBtn.setFillStyle(0x2196F3);
+        });
+        leftBtn.on('pointerout', () => {
+            if (this.joyStickDirection === 'left') this.joyStickDirection = null;
+            leftBtn.setFillStyle(0x2196F3);
+        });
 
-        const shootBtn = this.add.image(480, 680, 'shootBtn').setInteractive().setDepth(150).setScrollFactor(0);
+        // 右键
+        const rightBtn = this.add.rectangle(dpadX + spacing, dpadY, btnSize, btnSize, 0x2196F3).setInteractive().setDepth(150).setScrollFactor(0);
+        rightBtn.on('pointerdown', () => {
+            this.joyStickDirection = 'right';
+            rightBtn.setFillStyle(0x1976D2);
+        });
+        rightBtn.on('pointerup', () => {
+            if (this.joyStickDirection === 'right') this.joyStickDirection = null;
+            rightBtn.setFillStyle(0x2196F3);
+        });
+        rightBtn.on('pointerout', () => {
+            if (this.joyStickDirection === 'right') this.joyStickDirection = null;
+            rightBtn.setFillStyle(0x2196F3);
+        });
+
+        // 射击按钮
+        const shootBtn = this.add.circle(480, 680, 35, 0xFF5252).setInteractive().setDepth(150).setScrollFactor(0);
         shootBtn.on('pointerdown', () => {
             this.isShooting = true;
-            shootBtn.setAlpha(0.6);
+            shootBtn.setFillStyle(0xD32F2F);
         });
         shootBtn.on('pointerup', () => {
             this.isShooting = false;
-            shootBtn.setAlpha(1);
+            shootBtn.setFillStyle(0xFF5252);
         });
         shootBtn.on('pointerout', () => {
             this.isShooting = false;
-            shootBtn.setAlpha(1);
+            shootBtn.setFillStyle(0xFF5252);
         });
+
+        // 添加射击按钮文字
+        this.add.text(480, 680, 'FIRE', {
+            fontSize: '16px',
+            fill: '#fff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(151).setScrollFactor(0);
 
         // Setup responsiveness helper
         if (this.sys.game.device.os.desktop) {
-            // Maybe make it semi transparent on desktop so it doesn't obstruct too much
-            joyBase.setAlpha(0.3);
-            joyStick.setAlpha(0.3);
-            shootBtn.setAlpha(0.3);
+            dpadBg.setAlpha(0.4);
+            upBtn.setAlpha(0.5);
+            downBtn.setAlpha(0.5);
+            leftBtn.setAlpha(0.5);
+            rightBtn.setAlpha(0.5);
+            shootBtn.setAlpha(0.5);
         }
     }
 
-    updateJoystick(pointer, startX, startY, joyStick) {
-        let dx = pointer.x - startX;
-        let dy = pointer.y - startY;
-        let dist = Math.sqrt(dx * dx + dy * dy);
-        let maxDist = 60; // Increased range
-
-        if (dist > maxDist) {
-            dx = (dx / dist) * maxDist;
-            dy = (dy / dist) * maxDist;
-        }
-
-        joyStick.setPosition(startX + dx, startY + dy);
-
-        if (dist < 10) {
-            this.joyStickDirection = null;
-        } else if (Math.abs(dx) > Math.abs(dy)) {
-            this.joyStickDirection = dx > 0 ? 'right' : 'left';
-        } else {
-            this.joyStickDirection = dy > 0 ? 'down' : 'up';
-        }
-    }
 }
